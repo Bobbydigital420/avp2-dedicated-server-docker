@@ -1,30 +1,32 @@
-# Red Faction (2001) Dedicated Server 
+# Aliens versus Predator 2 (2001) Dedicated Server 
 
-A lightweight, multi-architecture (**AMD64 / ARM64**) Docker container for hosting classic Red Faction dedicated multiplayer servers. This image features integrated **Dash Faction** multiplayer tracker broadcasting hooks and leverages **VNC/noVNC/Fluxbox** for a server console in your web browser.
+A lightweight, multi-architecture (**AMD64 / ARM64**) Docker container for hosting classic Aliens versus Predator 2 dedicated multiplayer servers. This image supports both the base game and the Primal Hunt expansion through an environment configuration flag, utilizing **VNC/noVNC/Fluxbox** to display the server console GUI directly inside your web browser.
 
 ---
 
-##  Environment Variables & Configuration Keys
+## Environment Variables & Configuration Keys
 
 | Variable | Default Value | Description |
 | :--- | :--- | :--- |
-| **`SERVER_NAME`** | `Multiarch Faction Server` | The public server title that will display globally in the master server browser list. |
-| **`TRACKER_PORT`** | `7755` | The primary gameplay and outbound tracker heartbeat port (**UDP**). Maps directly to your WAN firewalls. |
-| **`EXTRA_FLAGS`** | `-np` | Additional execution arguments passed straight to the game engine (e.g., `-np` for no-pure asset check, `-maxplayers 24`, etc.). |
+| **`GAME_MODE`** | `base` | Determines which variant to host. Use `base` for original AvP2 or `primal_hunt` for the expansion. |
+| **`SERVER_ARGS`** | *(Blank)* | Additional execution arguments passed straight to the LithTech server binary (e.g., `-options serveroptions.txt`). |
 
 ---
 
-##  Volume Mount Path
+## Volume Mount Paths
 
 | Container Path | Description |
 | :--- | :--- |
-| **`/redfaction`** | Map this to your local host folder containing your base Red Faction game assets. |
+| **`/avp2`** | Map this to your local host folder containing your base AVP2 dedicated server assets and game files. |
+| **`/avp2ph`** | Map this to your local host folder containing your AVP2: Primal Hunt expansion game files. |
+
+*(Note: The container will automatically route to and check the appropriate directory depending on your active `GAME_MODE` variable selection).*
 
 ---
 
-##  Web-VNC Diagnostic Console & Server Monitoring
+## Web-VNC Diagnostic Console & Server Monitoring
 
-This container runs completely headless utilizing an internal virtual framebuffer layout (**Xvfb** and **Fluxbox**). However, it exposes a built-in **noVNC web interface** so you can physically look inside the container's desktop layer to monitor the live server console window.
+This container runs completely headless utilizing an internal virtual framebuffer layout (**Xvfb** and **Fluxbox**). However, it exposes a built-in **noVNC web interface** so you can physically view the container's desktop layer to configure options, monitor cycles, and read live game engine outputs.
 
 ### How to Access the Visual Console:
 1. Map port **`8080`** out of your container.
@@ -34,31 +36,35 @@ This container runs completely headless utilizing an internal virtual framebuffe
    ```
 3. Click the blue **Connect** button on the browser window interface. You will be dropped straight onto the container desktop workspace.
 
-
 ---
 
-##  Quick Start Command Line (Copy & Paste)
+## Quick Start Command Line (Copy & Paste)
 
 Run this command from your terminal to stand up a fully verified server instance instantly. 
 
 ```bash
 docker run -d -it --rm \
-  --name redfaction-server \
-  -e SERVER_NAME="Bobbys Destructible GeoMod Arena" \
-  -e TRACKER_PORT=7755 \
-  -e EXTRA_FLAGS="-np -maxplayers 16" \
-  -v "/mnt/user/appdata/redfaction:/redfaction" \
-  -p 7755:7755 \
+  --name avp2-server \
+  -e GAME_MODE="base" \
+  -e SERVER_ARGS="-options server.txt" \
+  -v "/mnt/user/appdata/avp2:/avp2" \
+  -v "/mnt/user/appdata/avp2ph:/avp2ph" \
+  -p 27888:27888/udp \
   -p 8080:8080 \
-  bobbydigital420/redfaction-dedicated-server:latest
+  bobbydigital420/avp2-dedicated-server:latest
 ```
 
-*(Note: Remember to replace `/mnt/user/appdata/redfaction` with the true path to your local game files folder and change the server name to your liking)*
+*(Note: Remember to replace `/mnt/user/appdata/avp2` and `/avp2ph` with the true paths to your local game asset storage configurations).*
 
 ---
 
-##  Critical Firewall Settings (OPNsense / pfSense)
-Because Red Faction's retro master tracking server requires inbound verification pings to match your outbound registration source port exactly, standard symmetric NAT port randomization will prevent your instance from verifying.
+## Networking & Client Connectivity Notes
 
-1. **Inbound Port Forward (NAT):** Forward Port **`7755` UDP** from your WAN interface directly to your host server's local IP address. Ensure your firewall rule association is set to **Pass** or **Register NAT Rule** (do not leave it on manual).
-2. **Outbound / Source NAT Rule:** Create a custom rule at the absolute top of your Outbound/Source NAT settings for your server's local IP address. Check the box to enable **Static-port**. This explicitly forces your router to preserve port `7755` as packets leave your home network instead of randomizing them.
+1. **WAN Connectivity:** Forward Port **`27888` UDP** from your router's WAN interface directly to your host machine's local IP address. 
+2. **Connecting to your Server:** Players should navigate to **Multiplayer > Internet > Find Internet Games** inside the *Aliens versus Predator 2* game menu and select your server or input your public IP address in join specific IP.
+
+When hosting a LAN game you must type in the hosts IP address because legacy DirectPlay discovery relies heavily on network broadcasts that are blocked by default Docker network bridging configuration.
+
+## Game Files
+
+I highly recommend to get your game files from and follow the instructions on https://avpunknown.com/avp2aio/ to setup your dedicated server. Make sure to install the master server patches if you would like your server to be listed in the avpunknown master server list.
